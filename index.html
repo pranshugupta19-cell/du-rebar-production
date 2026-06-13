@@ -793,13 +793,22 @@ function openCompleteModal(id){
   const e=cache.find(x=>x.id===id);
   document.getElementById('modal-title').textContent='Complete: '+e.diameter+'mm '+e.type;
   document.getElementById('modal-sub').textContent=e.partial_desc+' ('+e.partial_metres+'m)';
+  const isCoil = e.type==='coil';
+  const pcsLabel = isCoil ? 'New metres added to complete this coil' : 'New pieces added to complete this bundle';
+  const pcsPlaceholder = isCoil ? 'e.g. 33 metres wound today' : 'e.g. 7 new pieces added to the '+e.partial_metres+'m loose';
+  const looseSummary = isCoil
+    ? 'Pending: '+e.partial_metres+'m already wound'
+    : 'Pending: '+e.partial_metres+'m ('+e.partial_desc+')';
   document.getElementById('modal-body').innerHTML=`
-    <div class="field"><label>New pieces added to complete this batch <span>pieces from today's production added to the loose ones</span></label>
-    <input type="number" id="comp-new-pcs" step="1" placeholder="e.g. 41 new pieces added to the 7 loose" inputmode="numeric"></div>
-    <div class="field"><label>Actual weight of completed batch (kg) <span>optional</span></label>
-    <input type="number" id="comp-kg" step="0.1" placeholder="Enter kg if weighed" inputmode="decimal"></div>
+    <div style="background:var(--amber-light);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:#92400E;">
+      ${looseSummary}
+    </div>
+    <div class="field"><label>${pcsLabel} <span>only the NEW production today</span></label>
+    <input type="number" id="comp-new-pcs" step="1" placeholder="${pcsPlaceholder}" inputmode="numeric"></div>
+    <div class="field"><label>Weight of completed batch (kg/m) <span>optional — weight per metre</span></label>
+    <input type="number" id="comp-kg" step="0.001" placeholder="e.g. 0.290 kg/m" inputmode="decimal"></div>
     <div class="field"><label>Note <span>optional</span></label>
-    <input type="text" id="comp-note" placeholder="e.g. packed morning shift June 12"></div>`;
+    <input type="text" id="comp-note" placeholder="e.g. packed morning shift June 13"></div>`;
   document.getElementById('complete-modal').classList.add('open');
 }
 
@@ -811,31 +820,100 @@ function saveComplete(){
   const newPcs=parseFloat(document.getElementById('comp-new-pcs').value)||0;
   const kg=parseFloat(document.getElementById('comp-kg').value)||null;
   const note=document.getElementById('comp-note').value.trim();
+  const opName=currentOperator?currentOperator.name:'Unknown';
 
-  // Calculate new metres from new pieces added
+  // Work out how many new metres the NEW pieces contribute
   let newMetres=0;
-  if(e.type==='bundle') newMetres=newPcs*(e.bundle_len||bundleLen||12);
-  if(e.type==='prebend') newMetres=newPcs*(e.piece_len||0);
+  let bundleLenUsed=e.bundle_len||bundleLen||12;
+  if(e.type==='bundle') newMetres=+(newPcs*bundleLenUsed).toFixed(2);
+  if(e.type==='prebend') newMetres=+(newPcs*(e.piece_len||parseFloat(document.getElementById('comp-new-pcs').value)||0)).toFixed(2);
+  if(e.type==='coil') newMetres=+(newPcs).toFixed(2); // for coil, user enters metres not pieces
 
+  // Total metres of the completed batch = loose pending metres + new metres
+  const totalBatchMetres=+(e.partial_metres+newMetres).toFixed(2);
+
+  // Mark original entry as closed
   e.partial_closed=true;
-  e.completion={date:istDate(),time:istTime(),new_pieces:newPcs,new_metres:+newMetres.toFixed(2),kg,note};
+  e.completion={
+    date:istDate(),time:istTime(),
+    new_pieces:newPcs,new_metres:newMetres,
+    total_batch_metres:totalBatchMetres,
+    kg,note,operator:opName
+  };
   saveCache();
 
-  // Also log the new pieces as a fresh entry
-  if(newMetres>0){
+  const date=istDate(); const time=istTime();
+
+  // 1. Send UPDATE for original entry to sheet (mark partial_closed=true)
+  const updatePayload={
+    ...e,
+    sheet:'Production',
+    action:'close_partial',
+    timestamp:date+' '+time+' IST',
+    operator:opName
+  };
+  fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(updatePayload)}).catch(()=>{});
+
+  // 2. If new pieces were added, log them as a fresh production entry
+  if(newPcs>0){
+    const newId='p_'+Date.now();
     const newEntry={
-      id:'p_'+Date.now(), date:istDate(), time:istTime(),
-      line:e.line, type:e.type, diameter:e.diameter,
-      completed_metres:+newMetres.toFixed(2), partial_metres:0,
-      total_metres:+newMetres.toFixed(2), kg:null,
-      desc:newPcs+' new pcs added to complete batch ('+e.partial_desc+')',
-      partial_desc:'', has_partial:false, partial_closed:true,
-      note:'Completion of pending: '+e.id
+      id:newId,
+      date,time,
+      line:e.line,
+      type:e.type,
+      diameter:e.diameter,
+      completed_metres:newMetres,
+      partial_metres:0,
+      total_metres:newMetres,
+      kg:null,
+      desc:newPcs+' new pcs → completes batch with '+e.partial_metres+'m loose ('+e.partial_desc+')',
+      partial_desc:'',
+      has_partial:false,
+      partial_closed:true,
+      note:note||('Completion of: '+e.desc),
+      operator:opName
     };
-    cache.push(newEntry); saveCache();
+    cache.push(newEntry);
+    saveCache();
+    // Send new entry to sheet
+    fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({
+      ...newEntry,
+      sheet:'Production',
+      timestamp:date+' '+time+' IST'
+    })}).catch(()=>{});
   }
 
-  toast('Marked as completed ✓','ok');
+  // 3. Log a completion summary entry so sheet shows full picture
+  const summaryId='pc_'+Date.now();
+  const summaryEntry={
+    id:summaryId,
+    date,time,
+    line:e.line,
+    type:e.type,
+    diameter:e.diameter,
+    completed_metres:totalBatchMetres,
+    partial_metres:0,
+    total_metres:totalBatchMetres,
+    kg:kg||null,
+    desc:'BATCH COMPLETE: '+e.partial_metres+'m ('+e.partial_desc+') + '+newMetres+'m new = '+totalBatchMetres+'m total',
+    partial_desc:'',
+    has_partial:false,
+    partial_closed:true,
+    note:note,
+    operator:opName,
+    entry_type:'batch_completion',
+    original_id:e.id
+  };
+  cache.push(summaryEntry);
+  saveCache();
+  fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({
+    ...summaryEntry,
+    sheet:'Production',
+    timestamp:date+' '+time+' IST'
+  })}).catch(()=>{});
+
+  toast('Batch completed ✓ — saved to sheet','ok');
   closeModal();
   updatePendingBadge();
   renderPending();
@@ -978,7 +1056,12 @@ try {
 function saveOperators(){ localStorage.setItem('du_operators', JSON.stringify(operators)); }
 
 function initAuth(){
-  if(!currentOperator){
+  const sessionDate = localStorage.getItem('du_session_date');
+  const todayDate = istDate();
+  // Force re-login every new day or if no operator saved
+  if(!currentOperator || sessionDate !== todayDate){
+    currentOperator = null;
+    localStorage.removeItem('du_current_op');
     document.getElementById('pin-overlay').classList.add('open');
   } else {
     showOperatorBar();
@@ -1009,6 +1092,7 @@ function checkPin(){
   if(pinBuffer === adminPin){
     currentOperator = {name:'Admin', pin:adminPin, isAdmin:true};
     localStorage.setItem('du_current_op', JSON.stringify(currentOperator));
+    localStorage.setItem('du_session_date', istDate());
     document.getElementById('pin-overlay').classList.remove('open');
     showOperatorBar();
     pinBuffer=''; updatePinDots();
@@ -1019,6 +1103,7 @@ function checkPin(){
   if(op){
     currentOperator = op;
     localStorage.setItem('du_current_op', JSON.stringify(currentOperator));
+    localStorage.setItem('du_session_date', istDate());
     document.getElementById('pin-overlay').classList.remove('open');
     showOperatorBar();
     pinBuffer=''; updatePinDots();
@@ -1037,6 +1122,7 @@ function showOperatorBar(){
 function logout(){
   currentOperator = null;
   localStorage.removeItem('du_current_op');
+  localStorage.removeItem('du_session_date');
   pinBuffer='';
   updatePinDots();
   document.getElementById('pin-error').textContent='';
@@ -1249,13 +1335,13 @@ function renderMachineLog(){
   document.getElementById('machine-log-list').innerHTML=html;
 }
 
-// Override switchTab to handle new tabs
-const _origSwitch = switchTab;
-switchTab = function(name){
+// Unified switchTab covering all tabs
+function switchTab(name){
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',
     ['log','pending','stock','today','history','machine','admin'][i]===name));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('panel-'+name).classList.add('active');
+  const panel = document.getElementById('panel-'+name);
+  if(panel) panel.classList.add('active');
   if(name==='pending')renderPending();
   if(name==='stock')renderStock();
   if(name==='today')renderToday();
