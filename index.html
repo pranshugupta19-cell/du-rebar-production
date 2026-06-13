@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a56a0">
+<title>DU Rebar — Production Log</title>
+<style>
+:root{
+  --blue:#1a56a0;--blue-light:#EBF2FB;--blue-dark:#0e3570;
+  --green:#1D9E75;--green-light:#E1F5EE;--green-dark:#085041;
+  --amber:#F59E0B;--amber-light:#FFFBEB;
+  --bad:#A32D2D;--bad-bg:#FCEBEB;
+  --bg:#F5F5F5;--surface:#FFFFFF;
+  --border:#E0E0E0;--text:#111;--sub:#666;--muted:#999;
+  --radius:12px;--radius-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+.app{max-width:480px;margin:0 auto;padding:0 0 80px;}
+header{background:var(--blue);color:#fff;padding:16px 20px 14px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;}
+header .icon{width:36px;height:36px;background:rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+header h1{font-size:16px;font-weight:600;}
+header p{font-size:12px;opacity:0.8;margin-top:1px;}
+.tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:66px;z-index:99;overflow-x:auto;}
+.tab{flex:1;min-width:65px;padding:12px 4px;font-size:12px;font-weight:500;color:var(--sub);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue);}
+.panel{display:none;padding:16px;}
+.panel.active{display:block;}
+.card{background:var(--surface);border-radius:var(--radius);padding:16px;margin-bottom:14px;border:1px solid var(--border);}
+.card-title{font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:14px;}
+.type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.type-btn{padding:14px 6px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);cursor:pointer;text-align:center;}
+.type-btn .t-icon{font-size:22px;margin-bottom:4px;}
+.type-btn .t-name{font-size:12px;font-weight:600;color:var(--text);}
+.type-btn .t-sub{font-size:10px;color:var(--sub);margin-top:2px;}
+.type-btn.selected{border-color:var(--blue);background:var(--blue-light);}
+.type-btn.selected .t-name{color:var(--blue-dark);}
+.dia-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.dia-btn{padding:10px 4px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);cursor:pointer;font-size:13px;font-weight:700;color:var(--sub);text-align:center;}
+.dia-btn.selected{border-color:var(--blue);color:var(--blue);background:var(--blue-light);}
+.seg-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.seg-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+.seg-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;}
+.seg-btn{padding:10px 6px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);cursor:pointer;font-size:13px;font-weight:700;color:var(--sub);text-align:center;}
+.seg-btn.selected{border-color:var(--blue);color:var(--blue);background:var(--blue-light);}
+.field{margin-bottom:12px;}
+.field label{display:flex;justify-content:space-between;font-size:13px;color:var(--sub);margin-bottom:5px;}
+.field label span{font-size:11px;color:var(--muted);}
+.field input,.field select{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:16px;color:var(--text);background:var(--surface);outline:none;}
+.field input:focus{border-color:var(--blue);}
+.divider{height:1px;background:var(--border);margin:14px 0;}
+.partial-box{background:var(--amber-light);border:1.5px solid var(--amber);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px;}
+.partial-box .pb-title{font-size:12px;font-weight:600;color:#92400E;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.summary-box{background:var(--bg);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px;}
+.sum-row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;}
+.sum-row.total{font-weight:700;font-size:15px;border-top:1px solid var(--border);margin-top:6px;padding-top:8px;}
+.btn-primary{width:100%;padding:15px;background:var(--blue);color:#fff;border:none;border-radius:var(--radius);font-size:16px;font-weight:600;cursor:pointer;}
+.btn-primary:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;}
+.btn-primary:active:not(:disabled){opacity:0.85;}
+.btn-secondary{width:100%;padding:13px;background:var(--surface);color:var(--blue);border:1.5px solid var(--blue);border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer;margin-top:10px;}
+.btn-amber{width:100%;padding:13px;background:#F59E0B;color:#fff;border:none;border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer;margin-top:10px;}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.metric{background:var(--surface);border-radius:var(--radius);padding:14px;border:1px solid var(--border);}
+.metric-label{font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:5px;}
+.metric-value{font-size:20px;font-weight:600;color:var(--text);}
+.metric-unit{font-size:11px;font-weight:400;color:var(--sub);}
+.stock-table{width:100%;border-collapse:collapse;}
+.stock-table th{font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;}
+.stock-table td{font-size:13px;padding:9px 8px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.stock-table tr:last-child td{border-bottom:none;}
+.dia-pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;background:var(--blue-light);color:var(--blue-dark);}
+.pending-item{background:var(--amber-light);border:1px solid var(--amber);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;}
+.pending-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.pending-title{font-size:13px;font-weight:600;color:#92400E;}
+.pending-sub{font-size:11px;color:#B45309;margin-bottom:8px;}
+.complete-btn{padding:6px 14px;background:var(--green);color:#fff;border:none;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;}
+.log-item{padding:11px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;}
+.log-item:last-child{border-bottom:none;}
+.log-time{font-size:11px;color:var(--sub);margin-bottom:2px;}
+.log-desc{font-size:13px;color:var(--text);font-weight:500;}
+.log-sub{font-size:11px;color:var(--sub);margin-top:2px;}
+.log-right{text-align:right;white-space:nowrap;margin-left:10px;}
+.log-m{font-size:14px;font-weight:600;color:var(--blue);}
+.log-kg{font-size:11px;color:var(--sub);}
+.type-tag{display:inline-block;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700;margin-right:4px;}
+.tag-coil{background:#E6F1FB;color:#0C447C;}
+.tag-bundle{background:#EAF3DE;color:#3B6D11;}
+.tag-prebend{background:#F3E8FF;color:#5B21B6;}
+.tag-partial{background:var(--amber-light);color:#92400E;}
+.tag-complete{background:var(--green-light);color:var(--green-dark);}
+.empty{text-align:center;padding:32px 16px;color:var(--sub);font-size:14px;line-height:1.7;}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:11px 20px;border-radius:24px;font-size:13px;font-weight:500;opacity:0;pointer-events:none;transition:opacity 0.25s;z-index:999;white-space:nowrap;max-width:90vw;text-align:center;}
+.toast.show{opacity:1;}
+.toast.ok{background:var(--green);}
+.toast.err{background:var(--bad);}
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:flex-end;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border-radius:20px 20px 0 0;padding:20px 16px 32px;width:100%;max-width:480px;margin:0 auto;max-height:85vh;overflow-y:auto;}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:4px;}
+.modal-sub{font-size:13px;color:var(--sub);margin-bottom:16px;}
+.modal-close{float:right;background:none;border:none;font-size:22px;cursor:pointer;color:var(--sub);margin-top:-4px;}
+
+/* PIN / Auth */
+.pin-overlay{display:none;position:fixed;inset:0;background:var(--blue);z-index:500;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;}
+.pin-overlay.open{display:flex;}
+.pin-logo{font-size:48px;margin-bottom:16px;}
+.pin-title{font-size:20px;font-weight:700;color:#fff;margin-bottom:6px;}
+.pin-sub{font-size:14px;color:rgba(255,255,255,0.7);margin-bottom:32px;text-align:center;}
+.pin-dots{display:flex;gap:12px;margin-bottom:28px;}
+.pin-dot{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,0.3);transition:background 0.15s;}
+.pin-dot.filled{background:#fff;}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:240px;}
+.pin-btn{padding:18px;border:none;border-radius:var(--radius);background:rgba(255,255,255,0.15);color:#fff;font-size:22px;font-weight:600;cursor:pointer;}
+.pin-btn:active{background:rgba(255,255,255,0.3);}
+.pin-btn.zero{grid-column:2;}
+.pin-btn.del{background:rgba(255,255,255,0.08);font-size:18px;}
+.pin-error{color:#FCA5A5;font-size:13px;margin-top:12px;min-height:20px;}
+.operator-bar{background:var(--blue-light);padding:8px 16px;display:flex;justify-content:space-between;align-items:center;font-size:12px;}
+.operator-name{font-weight:600;color:var(--blue-dark);}
+.operator-logout{color:var(--blue);font-size:11px;background:none;border:none;cursor:pointer;font-weight:600;}
+/* Machine events */
+.event-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.event-btn{padding:16px 10px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);cursor:pointer;text-align:center;}
+.event-btn .e-icon{font-size:24px;margin-bottom:6px;}
+.event-btn .e-name{font-size:12px;font-weight:600;color:var(--text);}
+.event-btn .e-sub{font-size:10px;color:var(--sub);margin-top:2px;}
+.event-btn.ev-start{border-color:var(--green);background:var(--green-light);}
+.event-btn.ev-stop{border-color:#E0E0E0;background:#F9F9F9;}
+.event-btn.ev-breakdown{border-color:var(--amber);background:var(--amber-light);}
+.event-btn.ev-power{border-color:var(--bad);background:var(--bad-bg);}
+.event-btn.ev-restore{border-color:var(--green);background:var(--green-light);}
+.active-event{border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
+.ae-breakdown{background:var(--amber-light);border:1.5px solid var(--amber);}
+.ae-power{background:var(--bad-bg);border:1.5px solid #E24B4A;}
+.ae-running{background:var(--green-light);border:1.5px solid var(--green);}
+.ae-info{font-size:12px;font-weight:600;}
+.ae-sub{font-size:11px;color:var(--sub);margin-top:2px;}
+.ae-time{font-size:11px;color:var(--sub);white-space:nowrap;margin-left:8px;text-align:right;}
+.end-btn{padding:5px 12px;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.end-breakdown{background:var(--green);color:#fff;}
+.end-power{background:var(--green);color:#fff;}
+.end-stop{background:var(--bad);color:#fff;}
+.event-log-item{padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;}
+.event-log-item:last-child{border-bottom:none;}
+.el-left{flex:1;}
+.el-type{font-size:12px;font-weight:600;color:var(--text);}
+.el-detail{font-size:11px;color:var(--sub);margin-top:2px;}
+.el-right{text-align:right;font-size:11px;color:var(--sub);white-space:nowrap;margin-left:8px;}
+.ev-tag{display:inline-block;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700;margin-right:3px;}
+.evt-start{background:var(--green-light);color:var(--green-dark);}
+.evt-stop{background:#F3F4F6;color:#374151;}
+.evt-breakdown{background:var(--amber-light);color:#92400E;}
+.evt-restore{background:var(--green-light);color:var(--green-dark);}
+.evt-power{background:var(--bad-bg);color:var(--bad);}
+/* Admin */
+.admin-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);}
+.admin-item:last-child{border-bottom:none;}
+.admin-name{font-size:14px;font-weight:600;}
+.admin-pin{font-size:12px;color:var(--sub);margin-top:2px;}
+.del-op-btn{padding:4px 12px;background:var(--bad-bg);color:var(--bad);border:none;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<!-- PIN OVERLAY -->
+<div class="pin-overlay" id="pin-overlay">
+  <div class="pin-logo">🔐</div>
+  <div class="pin-title">DU Rebar</div>
+  <div class="pin-sub" id="pin-sub">Enter your PIN to continue</div>
+  <div class="pin-dots" id="pin-dots">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+  </div>
+  <div class="pin-pad">
+    <button class="pin-btn" onclick="pinPress('1')">1</button>
+    <button class="pin-btn" onclick="pinPress('2')">2</button>
+    <button class="pin-btn" onclick="pinPress('3')">3</button>
+    <button class="pin-btn" onclick="pinPress('4')">4</button>
+    <button class="pin-btn" onclick="pinPress('5')">5</button>
+    <button class="pin-btn" onclick="pinPress('6')">6</button>
+    <button class="pin-btn" onclick="pinPress('7')">7</button>
+    <button class="pin-btn" onclick="pinPress('8')">8</button>
+    <button class="pin-btn" onclick="pinPress('9')">9</button>
+    <button class="pin-btn zero" onclick="pinPress('0')">0</button>
+    <button class="pin-btn del" onclick="pinDel()">⌫</button>
+  </div>
+  <div class="pin-error" id="pin-error"></div>
+</div>
+
+<!-- OPERATOR BAR -->
+<div class="operator-bar" id="operator-bar" style="display:none;">
+  <span>👤 Logged in as: <span class="operator-name" id="op-name-bar">—</span></span>
+  <button class="operator-logout" onclick="logout()">Change operator</button>
+</div>
+<div class="app">
+  <header>
+    <div class="icon">📏</div>
+    <div>
+      <h1>DU Rebar — Production</h1>
+      <p>Metres · kg · pending stock tracker</p>
+    </div>
+  </header>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('log')">Log</button>
+    <button class="tab" onclick="switchTab('pending')">Pending <span id="pending-badge"></span></button>
+    <button class="tab" onclick="switchTab('stock')">Stock</button>
+    <button class="tab" onclick="switchTab('today')">Today</button>
+    <button class="tab" onclick="switchTab('history')">History</button>
+    <button class="tab" onclick="switchTab('machine')">Machine</button>
+    <button class="tab" onclick="switchTab('admin')">Admin</button>
+  </div>
+
+  <!-- ===== LOG ===== -->
+  <div id="panel-log" class="panel active">
+
+    <div class="card">
+      <div class="card-title">Production type</div>
+      <div class="type-grid">
+        <button class="type-btn" onclick="selectType(this,'coil')">
+          <div class="t-icon">🔄</div><div class="t-name">Coil</div><div class="t-sub">Custom length</div>
+        </button>
+        <button class="type-btn" onclick="selectType(this,'bundle')">
+          <div class="t-icon">📦</div><div class="t-name">Bundle</div><div class="t-sub">6m or 12m</div>
+        </button>
+        <button class="type-btn" onclick="selectType(this,'prebend')">
+          <div class="t-icon">📐</div><div class="t-name">Prebend</div><div class="t-sub">L, U, Custom</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="card" id="dia-card" style="display:none;">
+      <div class="card-title">Diameter</div>
+      <div class="dia-grid">
+        <button class="dia-btn" onclick="selectDia(this,'6')">6mm</button>
+        <button class="dia-btn" onclick="selectDia(this,'7')">7mm</button>
+        <button class="dia-btn" onclick="selectDia(this,'8')">8mm</button>
+        <button class="dia-btn" onclick="selectDia(this,'10')">10mm</button>
+        <button class="dia-btn" onclick="selectDia(this,'12')">12mm</button>
+        <button class="dia-btn" onclick="selectDia(this,'16')">16mm</button>
+        <button class="dia-btn" onclick="selectDia(this,'20')">20mm</button>
+      </div>
+    </div>
+
+    <!-- COIL -->
+    <div class="card" id="coil-card" style="display:none;">
+      <div class="card-title">Coil details</div>
+      <div class="field">
+        <label>Coil length (metres) <span>length per coil</span></label>
+        <input type="number" id="coil-len" step="1" placeholder="e.g. 100" inputmode="decimal" oninput="updateSummary()">
+      </div>
+      <div class="field">
+        <label>Complete coils <span>fully wound and closed</span></label>
+        <input type="number" id="coil-qty" step="1" placeholder="e.g. 5" inputmode="numeric" oninput="updateSummary()">
+      </div>
+      <div class="divider"></div>
+      <div class="partial-box">
+        <div class="pb-title">🟡 Partial coil (if any)</div>
+        <div class="field" style="margin-bottom:8px;">
+          <label>Metres wound so far <span>leave blank if none</span></label>
+          <input type="number" id="coil-partial-m" step="1" placeholder="e.g. 67" inputmode="decimal" oninput="updateSummary()">
+        </div>
+      </div>
+    </div>
+
+    <!-- BUNDLE -->
+    <div class="card" id="bundle-card" style="display:none;">
+      <div class="card-title">Bundle details</div>
+      <div class="field">
+        <label>Bundle length</label>
+        <div class="seg-grid">
+          <button class="seg-btn selected" id="bl-12" onclick="setBundleLen(12,this)">12m</button>
+          <button class="seg-btn" id="bl-6" onclick="setBundleLen(6,this)">6m</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Pieces per bundle <span>standard count</span></label>
+        <input type="number" id="bundle-pcs" step="1" placeholder="e.g. 48" inputmode="numeric" oninput="updateSummary()">
+      </div>
+      <div class="field">
+        <label>Complete bundles <span>fully packed</span></label>
+        <input type="number" id="bundle-qty" step="1" placeholder="e.g. 9" inputmode="numeric" oninput="updateSummary()">
+      </div>
+      <div class="divider"></div>
+      <div class="partial-box">
+        <div class="pb-title">🟡 Loose pieces (if any)</div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Loose pieces count <span>not yet packed into a bundle</span></label>
+          <input type="number" id="bundle-loose" step="1" placeholder="e.g. 7" inputmode="numeric" oninput="updateSummary()">
+        </div>
+      </div>
+    </div>
+
+    <!-- PREBEND -->
+    <div class="card" id="prebend-card" style="display:none;">
+      <div class="card-title">Prebend details</div>
+      <div class="field">
+        <label>Shape</label>
+        <div class="seg-grid-3">
+          <button class="seg-btn" id="sh-L" onclick="selectShape('L bend',this)">L bend</button>
+          <button class="seg-btn" id="sh-U" onclick="selectShape('U bend',this)">U bend</button>
+          <button class="seg-btn" id="sh-C" onclick="selectShape('custom',this)">Custom</button>
+        </div>
+        <input type="text" id="custom-shape-name" placeholder="Enter shape name (e.g. Z bend, Stirrup)" style="display:none;margin-top:8px;">
+      </div>
+      <div class="field">
+        <label>Length per piece <span>total metres all legs combined</span></label>
+        <input type="number" id="pb-len" step="0.01" placeholder="e.g. 1.710" inputmode="decimal" oninput="updateSummary()">
+      </div>
+      <div class="field">
+        <label>Complete pieces <span>finished and stacked</span></label>
+        <input type="number" id="pb-qty" step="1" placeholder="e.g. 120" inputmode="numeric" oninput="updateSummary()">
+      </div>
+      <div class="divider"></div>
+      <div class="partial-box">
+        <div class="pb-title">🟡 Partial / cut pieces (if any)</div>
+        <div class="field" style="margin-bottom:8px;">
+          <label>Piece count <span>pieces started but not finished</span></label>
+          <input type="number" id="pb-partial-qty" step="1" placeholder="e.g. 3" inputmode="numeric" oninput="updateSummary()">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Length per partial piece <span>metres</span></label>
+          <input type="number" id="pb-partial-len" step="0.01" placeholder="e.g. 0.85" inputmode="decimal" oninput="updateSummary()">
+        </div>
+      </div>
+    </div>
+
+    <!-- WEIGHT + LINE -->
+    <div class="card" id="wt-card" style="display:none;">
+      <div class="card-title">Weight & line</div>
+
+      <!-- Summary -->
+      <div class="summary-box" id="entry-summary"></div>
+
+      <div class="field">
+        <label>Weight per metre (kg/m) <span>optional — enter once per diameter</span></label>
+        <input type="number" id="prod-wpm" step="0.0001" placeholder="e.g. 0.290 for 12mm" inputmode="decimal" oninput="calcKgFromWpm()">
+      </div>
+      <div id="wpm-calc-row" style="display:none;background:var(--green-light);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:12px;">
+        <span style="font-size:12px;color:var(--green-dark);font-weight:500;" id="wpm-calc-text"></span>
+      </div>
+      <div class="field">
+        <label>Production line</label>
+        <div class="seg-grid">
+          <button class="seg-btn" id="ln-S1" onclick="selectLine('S1',this)">S1</button>
+          <button class="seg-btn" id="ln-S2" onclick="selectLine('S2',this)">S2</button>
+          <button class="seg-btn" id="ln-B1" onclick="selectLine('B1',this)">B1</button>
+          <button class="seg-btn" id="ln-B2" onclick="selectLine('B2',this)">B2</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Note <span>optional</span></label>
+        <input type="text" id="prod-note" placeholder="e.g. morning shift, order #12">
+      </div>
+    </div>
+
+    <button class="btn-primary" id="prod-submit" onclick="submitProd()" disabled>Select type to begin</button>
+  </div>
+
+  <!-- ===== PENDING ===== -->
+  <div id="panel-pending" class="panel">
+    <div style="font-size:13px;color:var(--sub);margin-bottom:14px;line-height:1.6;">
+      These are partial/loose pieces from previous entries. When packed into a complete bundle or coil, tap <b>Complete</b> to close them out and avoid double counting.
+    </div>
+    <div id="pending-list"><div class="empty">No pending items 👍</div></div>
+  </div>
+
+  <!-- ===== STOCK ===== -->
+  <div id="panel-stock" class="panel">
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Total metres</div><div class="metric-value" id="s-total-m">—</div></div>
+      <div class="metric"><div class="metric-label">Total kg</div><div class="metric-value" id="s-total-kg">—</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Completed stock by diameter</div>
+      <table class="stock-table">
+        <thead><tr><th>Dia</th><th>Metres</th><th>kg</th><th>Breakdown</th></tr></thead>
+        <tbody id="stock-by-dia"></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title">By type</div>
+      <table class="stock-table">
+        <thead><tr><th>Type</th><th>Metres</th><th>kg</th></tr></thead>
+        <tbody id="stock-by-type"></tbody>
+      </table>
+    </div>
+    <button class="btn-secondary" onclick="renderStock()">↻ Refresh</button>
+  </div>
+
+  <!-- ===== TODAY ===== -->
+  <div id="panel-today" class="panel">
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Entries</div><div class="metric-value" id="td-count">—</div></div>
+      <div class="metric"><div class="metric-label">Metres</div><div class="metric-value" id="td-m">—</div></div>
+      <div class="metric"><div class="metric-label">Weight</div><div class="metric-value" id="td-kg">—</div></div>
+      <div class="metric"><div class="metric-label">Pending</div><div class="metric-value" id="td-pend" style="color:var(--amber);">—</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Today's log</div>
+      <div id="today-log"><div class="empty">Nothing logged today yet</div></div>
+    </div>
+  </div>
+
+  <!-- ===== HISTORY ===== -->
+  <div id="panel-history" class="panel">
+    <div class="card" style="padding:12px 16px;">
+      <div class="card-title" style="margin-bottom:10px;">Filter by diameter</div>
+      <div class="dia-grid" id="hist-filter-grid">
+        <button class="dia-btn selected" onclick="setHistFilter('all',this)">All</button>
+        <button class="dia-btn" onclick="setHistFilter('6',this)">6mm</button>
+        <button class="dia-btn" onclick="setHistFilter('7',this)">7mm</button>
+        <button class="dia-btn" onclick="setHistFilter('8',this)">8mm</button>
+        <button class="dia-btn" onclick="setHistFilter('10',this)">10mm</button>
+        <button class="dia-btn" onclick="setHistFilter('12',this)">12mm</button>
+        <button class="dia-btn" onclick="setHistFilter('16',this)">16mm</button>
+        <button class="dia-btn" onclick="setHistFilter('20',this)">20mm</button>
+      </div>
+    </div>
+    <div id="history-log"><div class="empty">No history yet</div></div>
+  </div>
+
+  <!-- ===== MACHINE EVENTS ===== -->
+  <div id="panel-machine" class="panel">
+
+    <div id="active-events-section" style="display:none;">
+      <div class="card-title" style="padding:0 0 8px;">Active now</div>
+      <div id="active-events-list"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Log machine event</div>
+      <div class="field">
+        <label>Line</label>
+        <div class="seg-grid">
+          <button class="seg-btn" id="me-S1" onclick="selectMeLine('S1',this)">S1</button>
+          <button class="seg-btn" id="me-S2" onclick="selectMeLine('S2',this)">S2</button>
+          <button class="seg-btn" id="me-B1" onclick="selectMeLine('B1',this)">B1</button>
+          <button class="seg-btn" id="me-B2" onclick="selectMeLine('B2',this)">B2</button>
+        </div>
+      </div>
+      <div class="event-grid" id="event-btns">
+        <button class="event-btn ev-start" onclick="logEvent('start')">
+          <div class="e-icon">▶️</div><div class="e-name">Machine Start</div><div class="e-sub">Begin production</div>
+        </button>
+        <button class="event-btn ev-stop" onclick="logEvent('stop')">
+          <div class="e-icon">⏹️</div><div class="e-name">Machine Stop</div><div class="e-sub">End of shift</div>
+        </button>
+        <button class="event-btn ev-breakdown" onclick="logEvent('breakdown')">
+          <div class="e-icon">⚠️</div><div class="e-name">Breakdown</div><div class="e-sub">Log fault + reason</div>
+        </button>
+        <button class="event-btn ev-restore" onclick="logEvent('restored')">
+          <div class="e-icon">✅</div><div class="e-name">Breakdown Fixed</div><div class="e-sub">Machine restored</div>
+        </button>
+      </div>
+      <div style="margin-top:10px;">
+        <button class="event-btn ev-power" style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;" onclick="logEvent('power_failure')">
+          <span style="font-size:24px;">⚡</span>
+          <div style="text-align:left;"><div class="e-name" style="color:var(--bad);">Power Failure</div><div class="e-sub">All 4 lines affected</div></div>
+        </button>
+        <button class="event-btn ev-restore" style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;margin-top:8px;" onclick="logEvent('power_restored')">
+          <span style="font-size:24px;">🔌</span>
+          <div style="text-align:left;"><div class="e-name" style="color:var(--green-dark);">Power Restored</div><div class="e-sub">All lines back up</div></div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Breakdown reason modal trigger -->
+    <div id="breakdown-reason-box" style="display:none;" class="card">
+      <div class="card-title">Breakdown reason</div>
+      <div class="field">
+        <label>Reason / fault description</label>
+        <input type="text" id="breakdown-reason" placeholder="e.g. Resin pump failure, Belt snapped">
+      </div>
+      <button class="btn-primary" onclick="confirmBreakdown()">Confirm Breakdown Start</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Today's machine log</div>
+      <div id="machine-log-list"><div class="empty">No events logged today</div></div>
+    </div>
+  </div>
+
+  <!-- ===== ADMIN ===== -->
+  <div id="panel-admin" class="panel">
+    <div class="card">
+      <div class="card-title">Operators</div>
+      <div id="operator-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Add new operator</div>
+      <div class="field">
+        <label>Name</label>
+        <input type="text" id="new-op-name" placeholder="e.g. Ramesh">
+      </div>
+      <div class="field">
+        <label>PIN (4 digits)</label>
+        <input type="number" id="new-op-pin" placeholder="e.g. 1234" maxlength="4" inputmode="numeric">
+      </div>
+      <button class="btn-primary" onclick="addOperator()">Add Operator</button>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--bad);">Change Admin PIN</div>
+      <div class="field">
+        <label>New admin PIN (4 digits)</label>
+        <input type="number" id="new-admin-pin" placeholder="Current default: 0000" inputmode="numeric">
+      </div>
+      <button class="btn-primary" style="background:var(--bad);" onclick="changeAdminPin()">Update Admin PIN</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- COMPLETE MODAL -->
+<div class="modal-overlay" id="complete-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title" id="modal-title">Complete pending item</div>
+    <div class="modal-sub" id="modal-sub"></div>
+    <div id="modal-body"></div>
+    <button class="btn-primary" onclick="saveComplete()">Mark as Completed</button>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwdEhUOohMN2-R04Q2odx0RImKesXJo11NdfRrsF-7a7UZjhWhUkRkDLS8GSCva433Qyw/exec';
+const DIAS=['6','7','8','10','12','16','20'];
+
+let prodType=null, prodDia=null, prodLine=null;
+let bundleLen=12, prebendShape=null;
+let histFilter='all', completingId=null;
+
+let cache=[];
+try{cache=JSON.parse(localStorage.getItem('du_prod_v2')||'[]');}catch(e){}
+function saveCache(){try{localStorage.setItem('du_prod_v2',JSON.stringify(cache));}catch(e){}}
+
+function istNow(){return new Date(new Date().getTime()+5.5*60*60*1000);}
+function istDate(){return istNow().toISOString().slice(0,10);}
+function istTime(){return istNow().toISOString().slice(11,19);}
+function today(){return istDate();}
+
+function toast(msg,type){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show '+(type||'ok');setTimeout(()=>el.className='toast',2800);}
+
+/* ---- SELECTORS ---- */
+function selectType(el,type){
+  prodType=type;
+  document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('dia-card').style.display='block';
+  ['coil','bundle','prebend'].forEach(t=>document.getElementById(t+'-card').style.display=t===type?'block':'none');
+  document.getElementById('wt-card').style.display='none';
+  updateSummary(); updateSubmit();
+}
+
+function selectDia(el,dia){
+  prodDia=dia;
+  document.querySelectorAll('#dia-card .dia-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  updateSummary(); updateSubmit();
+}
+
+function selectLine(line,el){
+  prodLine=line;
+  document.querySelectorAll('[id^="ln-"]').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  updateSubmit();
+}
+
+function setBundleLen(len,el){
+  bundleLen=len;
+  document.querySelectorAll('[id^="bl-"]').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  updateSummary();
+}
+
+function selectShape(shape,el){
+  prebendShape=shape;
+  document.querySelectorAll('[id^="sh-"]').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('custom-shape-name').style.display=shape==='custom'?'block':'none';
+  updateSubmit();
+}
+
+/* ---- CALC ---- */
+function getCompletedMetres(){
+  if(prodType==='coil'){
+    const len=parseFloat(document.getElementById('coil-len').value);
+    const qty=parseFloat(document.getElementById('coil-qty').value)||0;
+    return (!isNaN(len)&&len>0)?len*qty:null;
+  }
+  if(prodType==='bundle'){
+    const pcs=parseFloat(document.getElementById('bundle-pcs').value);
+    const qty=parseFloat(document.getElementById('bundle-qty').value)||0;
+    if(isNaN(pcs)||pcs<=0)return null;
+    return bundleLen*pcs*qty;
+  }
+  if(prodType==='prebend'){
+    const len=parseFloat(document.getElementById('pb-len').value);
+    const qty=parseFloat(document.getElementById('pb-qty').value)||0;
+    if(isNaN(len)||len<=0)return null;
+    return len*qty;
+  }
+  return null;
+}
+
+function getPartialMetres(){
+  if(prodType==='coil'){
+    const m=parseFloat(document.getElementById('coil-partial-m').value);
+    return(!isNaN(m)&&m>0)?m:0;
+  }
+  if(prodType==='bundle'){
+    const pcs=parseFloat(document.getElementById('bundle-loose').value)||0;
+    const pcsPerBundle=parseFloat(document.getElementById('bundle-pcs').value)||0;
+    if(pcs<=0||pcsPerBundle<=0)return 0;
+    return bundleLen*pcs;
+  }
+  if(prodType==='prebend'){
+    const qty=parseFloat(document.getElementById('pb-partial-qty').value)||0;
+    const len=parseFloat(document.getElementById('pb-partial-len').value)||0;
+    return qty*len;
+  }
+  return 0;
+}
+
+function updateSummary(){
+  if(!prodType||!prodDia){document.getElementById('wt-card').style.display='none';return;}
+  const cm=getCompletedMetres();
+  const pm=getPartialMetres();
+  if(cm===null){document.getElementById('wt-card').style.display='none';updateSubmit();return;}
+
+  document.getElementById('wt-card').style.display='block';
+  let rows='';
+
+  if(prodType==='coil'){
+    const len=parseFloat(document.getElementById('coil-len').value)||0;
+    const qty=parseFloat(document.getElementById('coil-qty').value)||0;
+    rows+=`<div class="sum-row"><span>Complete coils</span><span>${qty} × ${len}m = ${cm.toFixed(0)}m</span></div>`;
+    if(pm>0)rows+=`<div class="sum-row" style="color:#92400E;"><span>Partial coil</span><span>${pm.toFixed(0)}m (pending)</span></div>`;
+  }
+  if(prodType==='bundle'){
+    const pcs=parseFloat(document.getElementById('bundle-pcs').value)||0;
+    const qty=parseFloat(document.getElementById('bundle-qty').value)||0;
+    const loose=parseFloat(document.getElementById('bundle-loose').value)||0;
+    rows+=`<div class="sum-row"><span>Complete bundles</span><span>${qty} × ${pcs}pcs × ${bundleLen}m = ${cm.toFixed(0)}m</span></div>`;
+    if(loose>0)rows+=`<div class="sum-row" style="color:#92400E;"><span>Loose pieces</span><span>${loose} pcs × ${bundleLen}m = ${pm.toFixed(0)}m (pending)</span></div>`;
+  }
+  if(prodType==='prebend'){
+    const len=parseFloat(document.getElementById('pb-len').value)||0;
+    const qty=parseFloat(document.getElementById('pb-qty').value)||0;
+    const pqty=parseFloat(document.getElementById('pb-partial-qty').value)||0;
+    const plen=parseFloat(document.getElementById('pb-partial-len').value)||0;
+    rows+=`<div class="sum-row"><span>Complete pieces</span><span>${qty} × ${len}m = ${cm.toFixed(0)}m</span></div>`;
+    if(pqty>0&&plen>0)rows+=`<div class="sum-row" style="color:#92400E;"><span>Partial pieces</span><span>${pqty} × ${plen}m = ${pm.toFixed(0)}m (pending)</span></div>`;
+  }
+
+  const total=cm+pm;
+  rows+=`<div class="sum-row total"><span>Total metres</span><span>${total.toFixed(1)}m</span></div>`;
+  document.getElementById('entry-summary').innerHTML=rows;
+  updateSubmit();
+}
+
+function updateSubmit(){
+  const btn=document.getElementById('prod-submit');
+  if(!prodType){btn.disabled=true;btn.textContent='Select type to begin';return;}
+  if(!prodDia){btn.disabled=true;btn.textContent='Select diameter';return;}
+  if(getCompletedMetres()===null){btn.disabled=true;btn.textContent='Enter quantities';return;}
+  if(prodType==='prebend'&&!prebendShape){btn.disabled=true;btn.textContent='Select prebend shape';return;}
+  if(!prodLine){btn.disabled=true;btn.textContent='Select a line';return;}
+  btn.disabled=false;btn.textContent='Record Production';
+}
+
+/* ---- SUBMIT ---- */
+function submitProd(){
+  if(!prodType||!prodDia||!prodLine){toast('Fill in all details','err');return;}
+  const cm=getCompletedMetres();
+  if(cm===null){toast('Enter quantities','err');return;}
+  const pm=getPartialMetres();
+  const wpm=parseFloat(document.getElementById('prod-wpm').value)||null;
+  const cm2=getCompletedMetres()||0;
+  const wt=wpm?+(wpm*cm2).toFixed(2):null;
+  const note=document.getElementById('prod-note').value.trim();
+
+  // build description
+  let desc='', partialDesc='';
+  if(prodType==='coil'){
+    const len=parseFloat(document.getElementById('coil-len').value);
+    const qty=parseInt(document.getElementById('coil-qty').value)||0;
+    desc=qty+'x coil ('+len+'m each)';
+    const pm2=parseFloat(document.getElementById('coil-partial-m').value)||0;
+    if(pm2>0)partialDesc='Partial coil: '+pm2+'m wound';
+  }
+  if(prodType==='bundle'){
+    const pcs=parseInt(document.getElementById('bundle-pcs').value);
+    const qty=parseInt(document.getElementById('bundle-qty').value)||0;
+    const loose=parseInt(document.getElementById('bundle-loose').value)||0;
+    desc=qty+' bundles of '+pcs+' pcs @ '+bundleLen+'m';
+    if(loose>0)partialDesc=loose+' loose pieces @ '+bundleLen+'m';
+  }
+  if(prodType==='prebend'){
+    const len=parseFloat(document.getElementById('pb-len').value);
+    const qty=parseInt(document.getElementById('pb-qty').value)||0;
+    const shapeName=prebendShape==='custom'?(document.getElementById('custom-shape-name').value||'Custom shape'):prebendShape;
+    desc=qty+'x '+shapeName+' ('+len+'m each)';
+    const pqty=parseInt(document.getElementById('pb-partial-qty').value)||0;
+    const plen=parseFloat(document.getElementById('pb-partial-len').value)||0;
+    if(pqty>0&&plen>0)partialDesc=pqty+' partial '+shapeName+' @ '+plen+'m each';
+    prebendShape=shapeName;
+  }
+
+  const id='p_'+Date.now();
+  const date=istDate(); const time=istTime();
+  const entry={
+    id, date, time, line:prodLine,
+    type:prodType, diameter:prodDia,
+    completed_metres:+cm.toFixed(2),
+    partial_metres:+pm.toFixed(2),
+    total_metres:+(cm+pm).toFixed(2),
+    kg:wt, desc, partial_desc:partialDesc,
+    has_partial:pm>0, partial_closed:false,
+    note
+  };
+
+  cache.push(entry); saveCache();
+  updatePendingBadge();
+
+  const btn=document.getElementById('prod-submit');
+  btn.disabled=true; btn.textContent='Saving...';
+
+  fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({...entry,sheet:'Production',timestamp:date+' '+time+' IST'})})
+    .then(r=>r.json()).then(()=>toast('Saved to Google Sheet ✓','ok'))
+    .catch(()=>toast('Saved locally — sync when online'));
+
+  // reset
+  setTimeout(()=>{
+    ['coil-len','coil-qty','coil-partial-m','bundle-pcs','bundle-qty','bundle-loose',
+     'pb-len','pb-qty','pb-partial-qty','pb-partial-len','prod-wpm','prod-note','custom-shape-name']
+    .forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
+    document.getElementById('wt-card').style.display='none';
+    document.getElementById('entry-summary').innerHTML='';
+    document.getElementById('wpm-calc-row').style.display='none';
+    btn.disabled=false; btn.textContent='Record Production';
+    updateSubmit();
+  },300);
+}
+
+/* ---- WPM CALC ---- */
+function calcKgFromWpm(){
+  const wpm=parseFloat(document.getElementById('prod-wpm').value);
+  const cm=getCompletedMetres()||0;
+  const pm=getPartialMetres()||0;
+  const row=document.getElementById('wpm-calc-row');
+  const txt=document.getElementById('wpm-calc-text');
+  if(isNaN(wpm)||wpm<=0||cm<=0){row.style.display='none';return;}
+  const completedKg=(wpm*cm).toFixed(2);
+  const totalKg=(wpm*(cm+pm)).toFixed(2);
+  let msg='Completed: '+cm.toFixed(1)+'m × '+wpm+' kg/m = '+completedKg+' kg';
+  if(pm>0) msg+=' · Total incl. partial: '+totalKg+' kg';
+  txt.textContent=msg;
+  row.style.display='block';
+}
+
+/* ---- PENDING ---- */
+function updatePendingBadge(){
+  const n=cache.filter(e=>e.has_partial&&!e.partial_closed).length;
+  document.getElementById('pending-badge').textContent=n>0?'('+n+')':'';
+}
+
+function renderPending(){
+  const items=cache.filter(e=>e.has_partial&&!e.partial_closed);
+  if(!items.length){document.getElementById('pending-list').innerHTML='<div class="empty">No pending items 👍<br>All stock is fully packed.</div>';return;}
+  let html='';
+  [...items].reverse().forEach(e=>{
+    html+=`<div class="pending-item">
+      <div class="pending-header">
+        <span class="pending-title">${e.diameter}mm — ${e.desc}</span>
+        <button class="complete-btn" onclick="openCompleteModal('${e.id}')">Complete</button>
+      </div>
+      <div class="pending-sub">${e.partial_desc} · ${e.partial_metres}m pending · from ${e.date} ${e.time.slice(0,5)}</div>
+      <div style="font-size:11px;color:var(--sub);">Line ${e.line}${e.note?' · '+e.note:''}</div>
+    </div>`;
+  });
+  document.getElementById('pending-list').innerHTML=html;
+}
+
+function openCompleteModal(id){
+  completingId=id;
+  const e=cache.find(x=>x.id===id);
+  document.getElementById('modal-title').textContent='Complete: '+e.diameter+'mm '+e.type;
+  document.getElementById('modal-sub').textContent=e.partial_desc+' ('+e.partial_metres+'m)';
+  document.getElementById('modal-body').innerHTML=`
+    <div class="field"><label>New pieces added to complete this batch <span>pieces from today's production added to the loose ones</span></label>
+    <input type="number" id="comp-new-pcs" step="1" placeholder="e.g. 41 new pieces added to the 7 loose" inputmode="numeric"></div>
+    <div class="field"><label>Actual weight of completed batch (kg) <span>optional</span></label>
+    <input type="number" id="comp-kg" step="0.1" placeholder="Enter kg if weighed" inputmode="decimal"></div>
+    <div class="field"><label>Note <span>optional</span></label>
+    <input type="text" id="comp-note" placeholder="e.g. packed morning shift June 12"></div>`;
+  document.getElementById('complete-modal').classList.add('open');
+}
+
+function closeModal(){document.getElementById('complete-modal').classList.remove('open');completingId=null;}
+
+function saveComplete(){
+  const e=cache.find(x=>x.id===completingId);
+  if(!e)return;
+  const newPcs=parseFloat(document.getElementById('comp-new-pcs').value)||0;
+  const kg=parseFloat(document.getElementById('comp-kg').value)||null;
+  const note=document.getElementById('comp-note').value.trim();
+
+  // Calculate new metres from new pieces added
+  let newMetres=0;
+  if(e.type==='bundle') newMetres=newPcs*(e.bundle_len||bundleLen||12);
+  if(e.type==='prebend') newMetres=newPcs*(e.piece_len||0);
+
+  e.partial_closed=true;
+  e.completion={date:istDate(),time:istTime(),new_pieces:newPcs,new_metres:+newMetres.toFixed(2),kg,note};
+  saveCache();
+
+  // Also log the new pieces as a fresh entry
+  if(newMetres>0){
+    const newEntry={
+      id:'p_'+Date.now(), date:istDate(), time:istTime(),
+      line:e.line, type:e.type, diameter:e.diameter,
+      completed_metres:+newMetres.toFixed(2), partial_metres:0,
+      total_metres:+newMetres.toFixed(2), kg:null,
+      desc:newPcs+' new pcs added to complete batch ('+e.partial_desc+')',
+      partial_desc:'', has_partial:false, partial_closed:true,
+      note:'Completion of pending: '+e.id
+    };
+    cache.push(newEntry); saveCache();
+  }
+
+  toast('Marked as completed ✓','ok');
+  closeModal();
+  updatePendingBadge();
+  renderPending();
+}
+
+/* ---- STOCK ---- */
+function renderStock(){
+  const completed=cache.filter(e=>!e.has_partial||e.partial_closed);
+  const byDia={};const byType={coil:{m:0,kg:0},bundle:{m:0,kg:0},prebend:{m:0,kg:0}};
+  let totalM=0,totalKg=0;
+  completed.forEach(e=>{
+    const d=e.diameter,m=parseFloat(e.completed_metres||0),kg=parseFloat(e.kg||0);
+    if(!byDia[d])byDia[d]={m:0,kg:0,coil:0,bundle:0,prebend:0};
+    byDia[d].m+=m; byDia[d].kg+=kg;
+    if(e.type&&byDia[d][e.type]!==undefined)byDia[d][e.type]+=m;
+    if(byType[e.type]){byType[e.type].m+=m;byType[e.type].kg+=kg;}
+    totalM+=m; totalKg+=kg;
+  });
+  document.getElementById('s-total-m').innerHTML=totalM.toFixed(0)+' <span class="metric-unit">m</span>';
+  document.getElementById('s-total-kg').innerHTML=(totalKg>0?totalKg.toFixed(0):'N/A')+' <span class="metric-unit">'+(totalKg>0?'kg':'(not weighed)')+'</span>';
+  let diaHtml='';
+  DIAS.filter(d=>byDia[d]).forEach(d=>{
+    const r=byDia[d];
+    const bd=[];
+    if(r.coil>0)bd.push('Coil:'+r.coil.toFixed(0)+'m');
+    if(r.bundle>0)bd.push('Bundle:'+r.bundle.toFixed(0)+'m');
+    if(r.prebend>0)bd.push('Prebend:'+r.prebend.toFixed(0)+'m');
+    diaHtml+=`<tr><td><span class="dia-pill">${d}mm</span></td><td><b>${r.m.toFixed(0)}</b>m</td><td>${r.kg>0?r.kg.toFixed(0)+'kg':'—'}</td><td style="font-size:11px;color:var(--sub);">${bd.join(' · ')}</td></tr>`;
+  });
+  document.getElementById('stock-by-dia').innerHTML=diaHtml||'<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--sub);">No completed stock yet</td></tr>';
+  const typeNames={coil:'🔄 Coil',bundle:'📦 Bundle',prebend:'📐 Prebend'};
+  let typeHtml='';
+  Object.keys(byType).forEach(t=>{if(byType[t].m>0)typeHtml+=`<tr><td>${typeNames[t]}</td><td><b>${byType[t].m.toFixed(0)}</b>m</td><td>${byType[t].kg>0?byType[t].kg.toFixed(0)+'kg':'—'}</td></tr>`;});
+  document.getElementById('stock-by-type').innerHTML=typeHtml||'<tr><td colspan="3" style="text-align:center;padding:20px;color:var(--sub);">No stock yet</td></tr>';
+}
+
+/* ---- TODAY ---- */
+function renderToday(){
+  const td=today();
+  const rows=cache.filter(e=>e.date===td);
+  document.getElementById('td-count').textContent=rows.length;
+  const tm=rows.reduce((s,r)=>s+parseFloat(r.total_metres||0),0);
+  const tkg=rows.filter(r=>r.kg).reduce((s,r)=>s+parseFloat(r.kg||0),0);
+  const pend=rows.filter(r=>r.has_partial&&!r.partial_closed).length;
+  document.getElementById('td-m').innerHTML=tm.toFixed(0)+' <span class="metric-unit">m</span>';
+  document.getElementById('td-kg').innerHTML=tkg>0?tkg.toFixed(0)+' <span class="metric-unit">kg</span>':'<span class="metric-unit">not weighed</span>';
+  document.getElementById('td-pend').textContent=pend||'0';
+  if(!rows.length){document.getElementById('today-log').innerHTML='<div class="empty">Nothing logged today yet</div>';return;}
+  let html='';
+  [...rows].reverse().forEach(r=>{
+    const tag=r.type==='coil'?'tag-coil':r.type==='bundle'?'tag-bundle':'tag-prebend';
+    const label=r.type||'';
+    html+=`<div class="log-item">
+      <div style="flex:1;">
+        <div class="log-time">${r.time||''} <span class="type-tag ${tag}">${label}</span> <span class="dia-pill" style="font-size:10px;">${r.diameter}mm</span> ${r.line?'<span style="font-size:10px;color:var(--sub);">'+r.line+'</span>':''}</div>
+        <div class="log-desc">${r.desc||''}</div>
+        ${r.has_partial&&!r.partial_closed?'<span class="type-tag tag-partial">'+r.partial_desc+' pending</span>':''}
+        ${r.has_partial&&r.partial_closed?'<span class="type-tag tag-complete">partial completed</span>':''}
+        ${r.note?'<div class="log-sub">'+r.note+'</div>':''}
+      </div>
+      <div class="log-right">
+        <div class="log-m">${parseFloat(r.completed_metres||0).toFixed(0)}m</div>
+        <div class="log-kg">${r.kg?r.kg+'kg':'not weighed'}</div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('today-log').innerHTML=html;
+}
+
+/* ---- HISTORY ---- */
+function setHistFilter(f,el){
+  histFilter=f;
+  document.querySelectorAll('#hist-filter-grid .dia-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  renderHistory();
+}
+
+function renderHistory(){
+  let rows=histFilter==='all'?[...cache]:cache.filter(e=>e.diameter===histFilter);
+  rows.sort((a,b)=>b.date.localeCompare(a.date));
+  if(!rows.length){document.getElementById('history-log').innerHTML='<div class="empty">No entries yet</div>';return;}
+  const byDate={};
+  rows.forEach(r=>{if(!byDate[r.date])byDate[r.date]=[];byDate[r.date].push(r);});
+  let html='';
+  Object.keys(byDate).sort().reverse().forEach(date=>{
+    const dr=byDate[date];
+    const dm=dr.reduce((s,r)=>s+parseFloat(r.completed_metres||0),0);
+    html+=`<div style="margin-bottom:4px;">
+      <div style="display:flex;justify-content:space-between;padding:6px 0;">
+        <span style="font-size:12px;font-weight:600;color:var(--sub);">${date}</span>
+        <span style="font-size:12px;color:var(--sub);">${dm.toFixed(0)}m completed</span>
+      </div>
+      <div class="card" style="padding:0 16px;">`;
+    dr.forEach(r=>{
+      const tag=r.type==='coil'?'tag-coil':r.type==='bundle'?'tag-bundle':'tag-prebend';
+      html+=`<div class="log-item">
+        <div style="flex:1;">
+          <div class="log-time">${r.time||''} <span class="type-tag ${tag}">${r.type||''}</span> <span class="dia-pill" style="font-size:10px;">${r.diameter}mm</span></div>
+          <div class="log-desc">${r.desc||''}</div>
+          ${r.has_partial&&!r.partial_closed?'<span class="type-tag tag-partial">'+r.partial_desc+' — pending</span>':''}
+        </div>
+        <div class="log-right">
+          <div class="log-m">${parseFloat(r.completed_metres||0).toFixed(0)}m</div>
+          <div class="log-kg">${r.kg?r.kg+'kg':'—'}</div>
+        </div>
+      </div>`;
+    });
+    html+='</div></div>';
+  });
+  document.getElementById('history-log').innerHTML=html;
+}
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['log','pending','stock','today','history'][i]===name));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  if(name==='pending')renderPending();
+  if(name==='stock')renderStock();
+  if(name==='today')renderToday();
+  if(name==='history')renderHistory();
+}
+
+// init
+updatePendingBadge();
+
+/* ========== OPERATOR / PIN SYSTEM ========== */
+let operators = [];
+let adminPin = '0000';
+let currentOperator = null;
+let pinBuffer = '';
+
+try {
+  const saved = JSON.parse(localStorage.getItem('du_operators')||'[]');
+  if(saved.length) operators = saved;
+  adminPin = localStorage.getItem('du_admin_pin')||'0000';
+  const savedOp = localStorage.getItem('du_current_op');
+  if(savedOp) currentOperator = JSON.parse(savedOp);
+} catch(e) {}
+
+function saveOperators(){ localStorage.setItem('du_operators', JSON.stringify(operators)); }
+
+function initAuth(){
+  if(!currentOperator){
+    document.getElementById('pin-overlay').classList.add('open');
+  } else {
+    showOperatorBar();
+  }
+}
+
+function pinPress(d){
+  if(pinBuffer.length>=4) return;
+  pinBuffer += d;
+  updatePinDots();
+  if(pinBuffer.length===4) setTimeout(checkPin, 150);
+}
+
+function pinDel(){
+  pinBuffer = pinBuffer.slice(0,-1);
+  updatePinDots();
+  document.getElementById('pin-error').textContent='';
+}
+
+function updatePinDots(){
+  for(let i=0;i<4;i++){
+    document.getElementById('pd'+i).classList.toggle('filled', i<pinBuffer.length);
+  }
+}
+
+function checkPin(){
+  // Check admin PIN first
+  if(pinBuffer === adminPin){
+    currentOperator = {name:'Admin', pin:adminPin, isAdmin:true};
+    localStorage.setItem('du_current_op', JSON.stringify(currentOperator));
+    document.getElementById('pin-overlay').classList.remove('open');
+    showOperatorBar();
+    pinBuffer=''; updatePinDots();
+    return;
+  }
+  // Check operator PINs
+  const op = operators.find(o=>o.pin===pinBuffer);
+  if(op){
+    currentOperator = op;
+    localStorage.setItem('du_current_op', JSON.stringify(currentOperator));
+    document.getElementById('pin-overlay').classList.remove('open');
+    showOperatorBar();
+    pinBuffer=''; updatePinDots();
+    document.getElementById('pin-error').textContent='';
+  } else {
+    document.getElementById('pin-error').textContent='Incorrect PIN. Try again.';
+    pinBuffer=''; updatePinDots();
+  }
+}
+
+function showOperatorBar(){
+  document.getElementById('operator-bar').style.display='flex';
+  document.getElementById('op-name-bar').textContent = currentOperator ? currentOperator.name : '—';
+}
+
+function logout(){
+  currentOperator = null;
+  localStorage.removeItem('du_current_op');
+  pinBuffer='';
+  updatePinDots();
+  document.getElementById('pin-error').textContent='';
+  document.getElementById('pin-sub').textContent='Enter your PIN to continue';
+  document.getElementById('operator-bar').style.display='none';
+  document.getElementById('pin-overlay').classList.add('open');
+}
+
+function addOperator(){
+  const name = document.getElementById('new-op-name').value.trim();
+  const pin  = document.getElementById('new-op-pin').value.trim();
+  if(!name || pin.length!==4 || isNaN(pin)){ toast('Enter name and 4-digit PIN','err'); return; }
+  if(operators.find(o=>o.pin===pin)){ toast('PIN already in use','err'); return; }
+  if(pin===adminPin){ toast('PIN matches admin PIN — choose another','err'); return; }
+  operators.push({name, pin});
+  saveOperators();
+  document.getElementById('new-op-name').value='';
+  document.getElementById('new-op-pin').value='';
+  renderOperatorList();
+  toast(name+' added ✓','ok');
+}
+
+function removeOperator(pin){
+  if(!confirm('Remove this operator?')) return;
+  operators = operators.filter(o=>o.pin!==pin);
+  saveOperators();
+  renderOperatorList();
+  toast('Operator removed','ok');
+}
+
+function changeAdminPin(){
+  const np = document.getElementById('new-admin-pin').value.trim();
+  if(np.length!==4||isNaN(np)){ toast('Enter a valid 4-digit PIN','err'); return; }
+  adminPin=np;
+  localStorage.setItem('du_admin_pin', adminPin);
+  document.getElementById('new-admin-pin').value='';
+  toast('Admin PIN updated ✓','ok');
+}
+
+function renderOperatorList(){
+  if(!operators.length){
+    document.getElementById('operator-list').innerHTML='<div class="empty" style="padding:16px 0;">No operators added yet</div>';
+    return;
+  }
+  let html='';
+  operators.forEach(o=>{
+    html+=`<div class="admin-item">
+      <div><div class="admin-name">${o.name}</div><div class="admin-pin">PIN: ${o.pin}</div></div>
+      <button class="del-op-btn" onclick="removeOperator('${o.pin}')">Remove</button>
+    </div>`;
+  });
+  document.getElementById('operator-list').innerHTML=html;
+}
+
+/* ========== MACHINE EVENTS ========== */
+let meLine = null;
+let machineEvents = [];
+try{ machineEvents = JSON.parse(localStorage.getItem('du_machine_v1')||'[]'); }catch(e){}
+function saveMachineEvents(){ localStorage.setItem('du_machine_v1', JSON.stringify(machineEvents)); }
+
+function selectMeLine(line, el){
+  meLine = line;
+  document.querySelectorAll('[id^="me-"]').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function logEvent(type){
+  const isPowerEvent = type==='power_failure'||type==='power_restored';
+  if(!isPowerEvent && !meLine){ toast('Select a line first','err'); return; }
+  if(type==='breakdown'){
+    document.getElementById('breakdown-reason-box').style.display='block';
+    document.getElementById('breakdown-reason').focus();
+    return;
+  }
+  saveEvent(type, isPowerEvent?'ALL':meLine, '');
+}
+
+function confirmBreakdown(){
+  if(!meLine){ toast('Select a line first','err'); return; }
+  const reason = document.getElementById('breakdown-reason').value.trim();
+  if(!reason){ toast('Enter breakdown reason','err'); return; }
+  saveEvent('breakdown', meLine, reason);
+  document.getElementById('breakdown-reason').value='';
+  document.getElementById('breakdown-reason-box').style.display='none';
+}
+
+function saveEvent(type, line, reason){
+  const id = 'ev_'+Date.now();
+  const date = istDate(); const time = istTime();
+  const opName = currentOperator ? currentOperator.name : 'Unknown';
+  const event = { id, date, time, type, line, reason, operator:opName };
+  machineEvents.push(event);
+  saveMachineEvents();
+
+  const labels = {
+    start:'Machine Start', stop:'Machine Stop',
+    breakdown:'Breakdown Started', restored:'Breakdown Fixed',
+    power_failure:'Power Failure', power_restored:'Power Restored'
+  };
+  toast((labels[type]||type)+' logged ✓','ok');
+
+  // Send to Google Sheet
+  fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({...event, sheet:'MachineLog', timestamp:date+' '+time+' IST'})})
+    .catch(()=>{});
+
+  renderMachineLog();
+  renderActiveEvents();
+}
+
+function getDowntime(startTime, endTime){
+  // Both are HH:MM:SS strings
+  const toSec = t => { const p=t.split(':'); return +p[0]*3600 + +p[1]*60 + (+p[2]||0); };
+  const diff = toSec(endTime) - toSec(startTime);
+  if(diff<=0) return '—';
+  const h = Math.floor(diff/3600);
+  const m = Math.floor((diff%3600)/60);
+  return h>0 ? h+'h '+m+'m' : m+'m';
+}
+
+function renderActiveEvents(){
+  const td = today();
+  const todayEvents = machineEvents.filter(e=>e.date===td);
+  const active = [];
+
+  // Find open breakdowns per line
+  const lines = ['S1','S2','B1','B2','ALL'];
+  lines.forEach(line=>{
+    const lineEvents = todayEvents.filter(e=>e.line===line||e.line==='ALL');
+    const lastBreakdown = [...lineEvents].reverse().find(e=>e.type==='breakdown');
+    const lastRestored  = [...lineEvents].reverse().find(e=>e.type==='restored');
+    if(lastBreakdown && (!lastRestored || lastRestored.time < lastBreakdown.time)){
+      active.push({...lastBreakdown, kind:'breakdown'});
+    }
+  });
+
+  // Power failure
+  const lastPF = [...todayEvents].reverse().find(e=>e.type==='power_failure');
+  const lastPR = [...todayEvents].reverse().find(e=>e.type==='power_restored');
+  if(lastPF && (!lastPR || lastPR.time < lastPF.time)){
+    active.push({...lastPF, kind:'power'});
+  }
+
+  const section = document.getElementById('active-events-section');
+  const list = document.getElementById('active-events-list');
+  if(!active.length){ section.style.display='none'; return; }
+  section.style.display='block';
+  let html='';
+  active.forEach(ev=>{
+    const cls = ev.kind==='power'?'ae-power':'ae-breakdown';
+    const endBtn = ev.kind==='power'
+      ? `<button class="end-btn end-power" onclick="logEvent('power_restored')">⚡ Restored</button>`
+      : `<button class="end-btn end-breakdown" onclick="endBreakdown('${ev.line}')">✅ Fixed</button>`;
+    html+=`<div class="active-event ${cls}">
+      <div>
+        <div class="ae-info">${ev.kind==='power'?'⚡ Power Failure — ALL lines':'⚠️ Breakdown — Line '+ev.line}</div>
+        <div class="ae-sub">${ev.reason||'No reason given'} · since ${ev.time.slice(0,5)}</div>
+      </div>
+      ${endBtn}
+    </div>`;
+  });
+  list.innerHTML=html;
+}
+
+function endBreakdown(line){
+  meLine=line;
+  document.querySelectorAll('[id^="me-"]').forEach(b=>{
+    b.classList.toggle('selected', b.id==='me-'+line);
+  });
+  saveEvent('restored', line, '');
+}
+
+function renderMachineLog(){
+  const td = today();
+  const rows = machineEvents.filter(e=>e.date===td);
+  if(!rows.length){
+    document.getElementById('machine-log-list').innerHTML='<div class="empty">No events today</div>';
+    return;
+  }
+  const labels = {
+    start:'Machine Start', stop:'Machine Stop',
+    breakdown:'Breakdown', restored:'Breakdown Fixed',
+    power_failure:'Power Failure', power_restored:'Power Restored'
+  };
+  const tagClass = {
+    start:'evt-start', stop:'evt-stop',
+    breakdown:'evt-breakdown', restored:'evt-restore',
+    power_failure:'evt-power', power_restored:'evt-restore'
+  };
+
+  // Calculate downtimes
+  let html='';
+  [...rows].reverse().forEach((ev,idx,arr)=>{
+    let downtime='';
+    if(ev.type==='restored'){
+      const matchBreakdown = [...rows].reverse().slice(idx+1).find(e=>e.type==='breakdown'&&e.line===ev.line);
+      if(matchBreakdown) downtime=' · Downtime: '+getDowntime(matchBreakdown.time, ev.time);
+    }
+    if(ev.type==='power_restored'){
+      const matchPF = [...rows].reverse().slice(idx+1).find(e=>e.type==='power_failure');
+      if(matchPF) downtime=' · Downtime: '+getDowntime(matchPF.time, ev.time);
+    }
+    html+=`<div class="event-log-item">
+      <div class="el-left">
+        <div class="el-type"><span class="ev-tag ${tagClass[ev.type]||''}">${labels[ev.type]||ev.type}</span> ${ev.line!=='ALL'?'Line '+ev.line:'All lines'}</div>
+        <div class="el-detail">${ev.reason?'Reason: '+ev.reason:''}${downtime} · by ${ev.operator||'—'}</div>
+      </div>
+      <div class="el-right">${ev.time.slice(0,5)}</div>
+    </div>`;
+  });
+  document.getElementById('machine-log-list').innerHTML=html;
+}
+
+// Override switchTab to handle new tabs
+const _origSwitch = switchTab;
+switchTab = function(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',
+    ['log','pending','stock','today','history','machine','admin'][i]===name));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  if(name==='pending')renderPending();
+  if(name==='stock')renderStock();
+  if(name==='today')renderToday();
+  if(name==='history')renderHistory();
+  if(name==='machine'){renderMachineLog();renderActiveEvents();}
+  if(name==='admin')renderOperatorList();
+}
+
+// ---- Patch submitProd and submitBatch to include operator ----
+const _origSubmitProd = submitProd;
+submitProd = function(){
+  // Inject operator into next cache push by monkey-patching push temporarily
+  const opName = currentOperator ? currentOperator.name : 'Unknown';
+  const origPush = cache.push.bind(cache);
+  cache.push = function(entry){ cache.push = origPush; return origPush({...entry, operator:opName}); };
+  _origSubmitProd();
+}
+
+// Init on load
+document.addEventListener('DOMContentLoaded', ()=>{
+  initAuth();
+  renderActiveEvents();
+  updatePendingBadge();
+});
+
+</script>
+</body>
+</html>
